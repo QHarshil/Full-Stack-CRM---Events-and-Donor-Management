@@ -1,0 +1,125 @@
+# BC Cancer Foundation - Donor Management CRM
+
+An enterprise-grade donor engagement platform for the BC Cancer Foundation. The system pairs a NestJS API with a modern React dashboard to deliver event planning, donor intelligence, and compliance-friendly auditing in a single toolkit.
+
+## Key Capabilities
+- **Advanced donor intelligence**: Multi-criteria matching algorithm ranks donors for each campaign with explainable score breakdowns.
+- **End-to-end event management**: Create, update, and track events, invitations, attendance, and fundraising progress in real time.
+- **Risk-aware governance**: Full audit trail captures privileged actions, authentications, and lifecycle events with before/after diffs and IP signatures.
+- **Executive dashboards**: Real-time analytics for donor segmentation, geographic distribution, and fundraising momentum.
+- **High-performance donor directory**: Server-side pagination with debounced search keeps the donor list responsive even with large datasets.
+- **Role-aware access control**: Hardened authentication, RBAC guards, and session management across the entire stack.
+
+## Audit Trail & Compliance
+- Every administrative mutation, event lifecycle change, and authentication is logged to the `audit_logs` table with actor, entity metadata, diffs, and sanitized payloads.
+- Baseline snapshots are seeded automatically on startup so historical records are in scope even before the audit trail was introduced.
+- Admins can review activity through:
+  - **API**: `GET /admin/audit-logs` (supports `page`, `limit`, `action`, `entityType`, `userId`, `startDate`, `endDate`) and `GET /admin/audit-logs/:id`.
+  - **UI**: Admin -> Audit Trail tab in the React dashboard (filters, pagination, JSON payload inspector, one-click CSV/JSON export aligned to the active filters).
+- Example: `GET http://localhost:3001/admin/audit-logs?limit=20&action=update` (requires admin session cookie).
+
+## System Architecture
+- **Client layer (React + Vite + Tailwind)**  
+  - Feature-driven layout with reusable UI primitives (shadcn/ui).  
+  - Admin console includes user management, audit viewer, and event orchestration.  
+  - API access through credentialed fetch calls to maintain session affinity.
+
+- **Service layer (NestJS + TypeScript)**  
+  - Modular design: `Auth`, `Admin`, `Events`, `Donors`, `Analytics`, and shared `AuditTrail` module.  
+  - Cross-cutting guards (`AuthGuard`, `RolesGuard`) and middleware (`CurrentUserMiddleware`) enforce policy.  
+  - Event-driven hooks supported via `@nestjs/event-emitter` for future real-time workflows.
+
+- **Data & persistence (TypeORM)**  
+  - Entities: `User`, `Donor`, `Event`, `EventDonor`, `AuditLog`.  
+  - Default SQLite for local dev; swap to PostgreSQL/MySQL by editing the TypeORM config.  
+  - Bootstrap seeder hydrates 500 realistic donors, canonical events, admin users, and baseline audit entries.
+
+- **Operational foundation**  
+  - Swagger/OpenAPI at `/api/docs`.  
+  - Deterministic configuration via per-environment `.env` files.  
+  - Build pipelines: `npm run build` in both `backend` and `frontend` produce deployable artifacts.
+
+## Quick Start
+1. **Prerequisites**  
+   - Node.js 18+  
+   - npm
+
+2. **Clone and install**
+   ```bash
+   git clone <repo>
+   cd bc-cancer-crm
+   ```
+
+   ```bash
+   cd backend
+   npm install
+   npm run build
+   ```
+
+   ```bash
+   cd ../frontend
+   npm install --legacy-peer-deps
+   npm run build
+   ```
+
+3. **Run locally**
+   ```bash
+   # Terminal 1
+   cd backend
+   npm start
+   ```
+
+   ```bash
+   # Terminal 2
+   cd frontend
+   npm run dev -- --host
+   ```
+
+4. **Access**
+   - Frontend: http://localhost:3000  
+   - API: http://localhost:3001  
+   - Docs: http://localhost:3001/api/docs
+
+## Demo Credentials
+- Admin: `admin / password123`  
+- Manager: `manager / password123`  
+- Staff: `staff / password123`
+
+## Verification
+
+```bash
+cd backend
+npm test
+```
+
+```bash
+cd frontend
+npm run test
+```
+
+## Continuous Integration
+- GitHub Actions workflow **.github/workflows/ci.yml** installs dependencies, builds, and runs the backend Jest suite and frontend Vitest suite on every push and pull request.
+
+## Operational Playbook
+- **Event lifecycle**: Create or update events from the Events page; matching engine can invite top donors with one click.  
+- **Audit review**: Visit Admin -> Audit Trail to filter by action/entity and drill into JSON payloads.  
+- **User governance**: Manage roles and activation flags from Admin -> User Directory.
+
+## Technical Highlights
+- **Multi-criteria donor matching**: Weighted scoring across interests, geography, donation history, recency, engagement, and capacity with adjustable weight profiles.  
+- **Extensible audit payloads**: Sanitized deep diffs and metadata builders make it safe to archive payloads without leaking credentials.  
+- **Defensive seeding**: Bootstrap process is idempotent, skips existing data, and backfills audit history to maintain traceability.
+
+## API Reference
+- Explore the autogenerated Swagger UI at `/api/docs`.  
+- Admin-only audit endpoints: `/admin/audit-logs`, `/admin/audit-logs/:id`.  
+- Authentication endpoints: `/auth/signin`, `/auth/signup`, `/auth/signout`, `/auth/whoami`.  
+- Event, donor, and analytics routes documented in Swagger with expected payloads and guard requirements.
+
+---
+
+Built for the BC Cancer Foundation to demonstrate production-ready engineering, governance, and analytics depth.
+
+
+
+
