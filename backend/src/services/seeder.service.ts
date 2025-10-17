@@ -39,6 +39,7 @@ export class SeederService implements OnModuleInit {
     await this.seedUsers();
     await this.seedDonors();
     await this.seedEvents();
+    await this.ensureAnalyticsCoverage();
     await this.seedBaselineAuditLogs();
   }
 
@@ -262,6 +263,175 @@ export class SeederService implements OnModuleInit {
     this.logger.log(`Seeded ${events.length} events`);
   }
 
+  private async ensureAnalyticsCoverage() {
+    await this.ensureMonthlyGiftCoverage();
+    await this.ensureEngagementCohorts();
+  }
+
+  private async ensureMonthlyGiftCoverage() {
+    const now = new Date();
+
+    const bcCities = [
+      'Vancouver',
+      'Victoria',
+      'Kelowna',
+      'Kamloops',
+      'Nanaimo',
+      'Prince George',
+      'Abbotsford',
+      'Surrey',
+      'Burnaby',
+      'Richmond',
+    ];
+
+    const cancerTypes = [
+      'Breast Cancer',
+      'Lung Cancer',
+      'Prostate Cancer',
+      'Colon Cancer',
+      'Melanoma',
+      'Leukemia',
+      'Lymphoma',
+      'Pancreatic Cancer',
+      'Kidney Cancer',
+      'Bladder Cancer',
+      'Thyroid Cancer',
+      'Liver Cancer',
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const monthReference = new Date(now);
+      monthReference.setDate(1);
+      monthReference.setHours(0, 0, 0, 0);
+      monthReference.setMonth(monthReference.getMonth() - i);
+
+      const monthStart = new Date(monthReference);
+      const monthEnd = new Date(monthReference);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      monthEnd.setMilliseconds(monthEnd.getMilliseconds() - 1);
+
+      const existing = await this.donorRepository
+        .createQueryBuilder('donor')
+        .where('donor.deceased = :deceased', { deceased: false })
+        .andWhere('donor.exclude = :exclude', { exclude: false })
+        .andWhere('donor.lastGiftDate BETWEEN :start AND :end', {
+          start: monthStart,
+          end: monthEnd,
+        })
+        .getCount();
+
+      if (existing > 0) {
+        continue;
+      }
+
+      const firstName = faker.person.firstName();
+      const lastName = faker.person.lastName();
+      const lastGiftDate = faker.date.between({ from: monthStart, to: monthEnd });
+      const lastGiftAmount = faker.number.float({ min: 500, max: 7500, fractionDigits: 2 });
+      const totalDonations = lastGiftAmount * faker.number.int({ min: 4, max: 12 });
+
+      const donor = this.donorRepository.create({
+        firstName,
+        lastName,
+        email: faker.internet.email({ firstName, lastName }).toLowerCase(),
+        phone: faker.phone.number(),
+        organization: faker.datatype.boolean({ probability: 0.3 }) ? faker.company.name() : null,
+        addressLine1: faker.location.streetAddress(),
+        addressLine2: faker.datatype.boolean({ probability: 0.2 })
+          ? faker.location.secondaryAddress()
+          : null,
+        city: faker.helpers.arrayElement(bcCities),
+        province: 'BC',
+        postalCode: faker.location.zipCode('V#V #V#'),
+        interests: faker.helpers.arrayElements(cancerTypes, { min: 1, max: 3 }),
+        totalDonations,
+        largestGift: Math.max(
+          lastGiftAmount,
+          faker.number.float({ min: 1000, max: lastGiftAmount * 1.5, fractionDigits: 2 }),
+        ),
+        firstGiftDate: faker.date.past({ years: 5 }),
+        lastGiftDate,
+        lastGiftAmount,
+        subscriptionEventsInPerson: true,
+        subscriptionNewsletter: faker.datatype.boolean({ probability: 0.7 }),
+        exclude: false,
+        deceased: false,
+        notes: 'Seeded analytics donor ensuring monthly coverage.',
+      });
+
+      await this.donorRepository.save(donor);
+    }
+  }
+
+  private async ensureEngagementCohorts() {
+    const totalDonors = await this.donorRepository.count({
+      where: { deceased: false, exclude: false },
+    });
+
+    if (totalDonors === 0) {
+      return;
+    }
+
+    const categories: Array<{
+      minimum: number;
+      mutator: (donor: Donor) => void;
+      where: Partial<Donor>;
+    }> = [
+      {
+        where: { subscriptionEventsInPerson: true, subscriptionNewsletter: true },
+        minimum: Math.max(5, Math.floor(totalDonors * 0.12)),
+        mutator: (donor: Donor) => {
+          donor.subscriptionEventsInPerson = true;
+          donor.subscriptionNewsletter = true;
+        },
+      },
+      {
+        where: { subscriptionEventsInPerson: true, subscriptionNewsletter: false },
+        minimum: Math.max(5, Math.floor(totalDonors * 0.1)),
+        mutator: (donor: Donor) => {
+          donor.subscriptionEventsInPerson = true;
+          donor.subscriptionNewsletter = false;
+        },
+      },
+      {
+        where: { subscriptionEventsInPerson: false, subscriptionNewsletter: true },
+        minimum: Math.max(5, Math.floor(totalDonors * 0.15)),
+        mutator: (donor: Donor) => {
+          donor.subscriptionEventsInPerson = false;
+          donor.subscriptionNewsletter = true;
+        },
+      },
+    ];
+
+    for (const category of categories) {
+      const existing = await this.donorRepository.count({
+        where: { deceased: false, exclude: false, subscriptionEventsInPerson: category.where.subscriptionEventsInPerson, subscriptionNewsletter: category.where.subscriptionNewsletter },
+      });
+
+      if (existing >= category.minimum) {
+        continue;
+      }
+
+      const shortage = category.minimum - existing;
+      await this.promoteDonorsIntoEngagement(shortage, category.mutator);
+    }
+  }
+
+  private async promoteDonorsIntoEngagement(count: number, mutator: (donor: Donor) => void) {
+    if (count <= 0) {
+      return;
+    }
+
+    const candidates = await this.donorRepository.find({
+      where: { deceased: false, exclude: false },
+      order: { lastGiftDate: 'DESC' },
+      take: count,
+    });
+
+    candidates.forEach(mutator);
+    await this.donorRepository.save(candidates);
+  }
+
   private async seedBaselineAuditLogs() {
     const existingLogs = await this.auditLogRepository.count();
     if (existingLogs > 0) {
@@ -320,6 +490,7 @@ export class SeederService implements OnModuleInit {
     );
   }
 }
+
 
 
 

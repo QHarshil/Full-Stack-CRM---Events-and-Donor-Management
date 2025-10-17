@@ -15,6 +15,10 @@ import EventDetailView from '@/features/events/components/EventDetailView.jsx'
 import { formatCurrency, formatDate } from '@/lib/formatters.js'
 import { EVENT_STATUS_BADGE_VARIANT } from '@/features/events/constants.js'
 import { getAuditActionLabel } from '@/features/audit/auditUtils.ts'
+import { DonationTrendCard } from '@/features/analytics/components/DonationTrendCard.jsx'
+import { EngagementBreakdownCard } from '@/features/analytics/components/EngagementBreakdownCard.jsx'
+import { SegmentPerformanceCard } from '@/features/analytics/components/SegmentPerformanceCard.jsx'
+import { CityPerformanceCard } from '@/features/analytics/components/CityPerformanceCard.jsx'
 import './App.css'
 
 const API_URL = 'http://localhost:3001'
@@ -47,20 +51,6 @@ const DONOR_SORT_OPTIONS = [
   { value: 'lastGiftAmount-desc', label: 'Last Gift Amount (High to Low)' },
   { value: 'alphabetical-asc', label: 'Name (A-Z)' },
 ]
-
-const DONOR_SORTERS = {
-  'totalDonations-desc': (a, b) => (b.totalDonations || 0) - (a.totalDonations || 0),
-  'lastGiftDate-desc': (a, b) => {
-    const toTime = (value) => (value ? new Date(value).getTime() : 0)
-    return toTime(b.lastGiftDate) - toTime(a.lastGiftDate)
-  },
-  'lastGiftAmount-desc': (a, b) => (b.lastGiftAmount || 0) - (a.lastGiftAmount || 0),
-  'alphabetical-asc': (a, b) => {
-    const toComparable = (donor) =>
-      `${donor.lastName || ''} ${donor.firstName || ''}`.trim().toLowerCase()
-    return toComparable(a).localeCompare(toComparable(b))
-  },
-}
 
 const DONOR_PAGE_SIZE = 50
 
@@ -1076,18 +1066,7 @@ function App() {
                 </CardContent>
               </Card>
 
-              <Card
-                role="button"
-                tabIndex={0}
-                onClick={() => setCurrentPage('donors')}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setCurrentPage('donors')
-                  }
-                }}
-                className="transition cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              >
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">Total Donations</CardTitle>
                   <TrendingUp className="w-4 h-4 text-gray-400" />
@@ -1125,16 +1104,28 @@ function App() {
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-2">
+                <DonationTrendCard data={analytics?.donationTrend ?? []} />
+              </div>
+              <EngagementBreakdownCard breakdown={analytics?.engagementBreakdown} />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <SegmentPerformanceCard
+                segments={analytics?.donorSegments ?? []}
+                totalDonors={analytics?.totalDonors ?? 0}
+              />
+
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle>Top Donors</CardTitle>
-                  <CardDescription>Most generous supporters this fiscal year</CardDescription>
+                  <CardDescription>Leading supporters ranked by lifetime giving.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {analytics.topDonors.slice(0, 5).map((donor) => (
-                      <div key={donor.id} className="flex items-center justify-between">
+                    {(analytics?.topDonors ?? []).slice(0, 6).map(donor => (
+                      <div key={donor.id} className="flex items-center justify-between gap-4">
                         <div>
                           <p className="font-medium text-gray-900">
                             {donor.firstName} {donor.lastName}
@@ -1143,40 +1134,11 @@ function App() {
                             {donor.city}, {donor.province}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold">{formatCurrency(donor.totalDonations)}</p>
-                          <p className="text-xs text-gray-500">
-                            Largest gift: {formatCurrency(donor.largestGift)}
+                        <div className="text-right text-sm text-gray-600">
+                          <p className="font-semibold text-gray-900">
+                            {formatCurrency(donor.totalDonations)}
                           </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Donor Segments</CardTitle>
-                  <CardDescription>Distribution by donation level</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {analytics.donorSegments.map((segment) => (
-                      <div key={segment.segment} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Badge variant={segment.segment === 'major' ? 'default' : 'secondary'}>
-                            {segment.segment.toUpperCase()}
-                          </Badge>
-                          <span className="text-sm text-gray-600">{segment.count} donors</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">
-                            ${(segment.totalDonations / 1000).toFixed(0)}K
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Avg: ${(segment.averageDonation / 1000).toFixed(1)}K
-                          </div>
+                          <p>Largest gift {formatCurrency(donor.largestGift)}</p>
                         </div>
                       </div>
                     ))}
@@ -1185,25 +1147,28 @@ function App() {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Cities</CardTitle>
-                <CardDescription>Donor distribution by location</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {analytics.topCities.slice(0, 5).map((city) => (
-                    <div key={city.city} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{city.city}</span>
-                      <div className="flex items-center space-x-4">
-                        <span className="text-sm text-gray-600">{city.count} donors</span>
-                        <span className="text-sm font-medium">${(city.totalDonations / 1000).toFixed(0)}K</span>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <CityPerformanceCard cities={(analytics?.topCities ?? []).slice(0, 6)} />
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle>Leading Causes & Interests</CardTitle>
+                  <CardDescription>Top focus areas attracting supporters across the province.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {(analytics?.topInterests ?? []).slice(0, 8).map((interest) => (
+                      <div
+                        key={interest.interest}
+                        className="flex items-center justify-between rounded-md border border-gray-100 px-3 py-2"
+                      >
+                        <span className="text-sm font-medium text-gray-900">{interest.interest}</span>
+                        <span className="text-xs text-gray-500">{interest.count} engaged donors</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
           </div>
         )}

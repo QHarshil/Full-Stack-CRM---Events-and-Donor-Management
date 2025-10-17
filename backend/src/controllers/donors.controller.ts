@@ -62,18 +62,26 @@ export class DonorsController {
 
     switch (sort) {
       case 'lastGiftDate-desc':
-        query.orderBy('donor.lastGiftDate', 'DESC', 'NULLS LAST');
+        query.orderBy('donor.lastGiftDate IS NULL', 'ASC');
+        query.addOrderBy('donor.lastGiftDate', 'DESC');
         break;
       case 'lastGiftAmount-desc':
-        query.orderBy('donor.lastGiftAmount', 'DESC');
+        query
+          .orderBy('donor.lastGiftAmount', 'DESC')
+          .addOrderBy('donor.lastGiftDate IS NULL', 'ASC')
+          .addOrderBy('donor.lastGiftDate', 'DESC');
         break;
       case 'alphabetical-asc':
         query
           .orderBy('LOWER(donor.lastName)', 'ASC')
-          .addOrderBy('LOWER(donor.firstName)', 'ASC');
+          .addOrderBy('LOWER(donor.firstName)', 'ASC')
+          .addOrderBy('donor.id', 'ASC');
         break;
       default:
-        query.orderBy('donor.totalDonations', 'DESC');
+        query
+          .orderBy('donor.totalDonations', 'DESC')
+          .addOrderBy('donor.lastGiftDate IS NULL', 'ASC')
+          .addOrderBy('donor.lastGiftDate', 'DESC');
     }
 
     query.skip((page - 1) * limit);

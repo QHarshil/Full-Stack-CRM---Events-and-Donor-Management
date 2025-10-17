@@ -6,8 +6,8 @@ An enterprise-grade donor engagement platform for the BC Cancer Foundation. The 
 - **Advanced donor intelligence**: Multi-criteria matching algorithm ranks donors for each campaign with explainable score breakdowns.
 - **End-to-end event management**: Create, update, and track events, invitations, attendance, and fundraising progress in real time.
 - **Risk-aware governance**: Full audit trail captures privileged actions, authentications, and lifecycle events with before/after diffs and IP signatures.
-- **Executive dashboards**: Real-time analytics for donor segmentation, geographic distribution, and fundraising momentum.
-- **High-performance donor directory**: Server-side pagination with debounced search keeps the donor list responsive even with large datasets.
+- **Executive dashboards**: Real-time analytics for donor segmentation, geographic distribution, and fundraising momentum with interactive trend visualizations.
+- **Insightful fundraising analytics**: Donation velocity, geo-performance, and engagement channel coverage displayed with production-ready charts.
 - **Role-aware access control**: Hardened authentication, RBAC guards, and session management across the entire stack.
 
 ## Audit Trail & Compliance
@@ -17,6 +17,12 @@ An enterprise-grade donor engagement platform for the BC Cancer Foundation. The 
   - **API**: `GET /admin/audit-logs` (supports `page`, `limit`, `action`, `entityType`, `userId`, `startDate`, `endDate`) and `GET /admin/audit-logs/:id`.
   - **UI**: Admin -> Audit Trail tab in the React dashboard (filters, pagination, JSON payload inspector, one-click CSV/JSON export aligned to the active filters).
 - Example: `GET http://localhost:3001/admin/audit-logs?limit=20&action=update` (requires admin session cookie).
+
+## Analytics Dashboard
+- **Rolling gift velocity**: 12-month area chart highlighting momentum and cumulative giving (pre-seeded to ensure insight on first boot).
+- **Engagement breakdown**: Omnichannel vs. single-channel participation with drillable pie analytics.
+- **Segment performance**: Progress indicators for philanthropists, major donors, growth segment, and emerging contributors.
+- **Geo & cause insights**: Horizontal bar chart for top cities and ranked interests for campaign focus.
 
 ## System Architecture
 - **Client layer (React + Vite + Tailwind)**  
@@ -40,6 +46,8 @@ An enterprise-grade donor engagement platform for the BC Cancer Foundation. The 
   - Build pipelines: `npm run build` in both `backend` and `frontend` produce deployable artifacts.
 
 ## Quick Start
+> Seeder backfills monthly gifts and engagement cohorts so dashboards are populated on first boot.
+
 1. **Prerequisites**  
    - Node.js 18+  
    - npm
@@ -119,6 +127,11 @@ npm run test
 ---
 
 Built for the BC Cancer Foundation to demonstrate production-ready engineering, governance, and analytics depth.
+
+
+
+
+
 
 
 
