@@ -93,6 +93,23 @@ An enterprise-grade donor engagement platform for the BC Cancer Foundation. The 
 - Manager: `manager / password123`  
 - Staff: `staff / password123`
 
+## Product Tour
+
+<table>
+  <tr>
+    <td><img src="assets/dashboard-1.png" alt="Dashboard Overview" width="400" /></td>
+    <td><img src="assets/dashboard-2.png" alt="Dashboard Analytics" width="400" /></td>
+  </tr>
+  <tr>
+    <td><img src="assets/donors.png" alt="Donor Directory" width="400" /></td>
+    <td><img src="assets/events.png" alt="Event Management" width="400" /></td>
+  </tr>
+  <tr>
+    <td><img src="assets/admin.png" alt="Admin Controls" width="400" /></td>
+    <td><img src="assets/audit-trail.png" alt="Audit Trail" width="400" /></td>
+  </tr>
+</table>
+
 ## Verification
 
 ```bash
@@ -127,6 +144,8 @@ npm run test
 ---
 
 Built for the BC Cancer Foundation to demonstrate production-ready engineering, governance, and analytics depth.
+
+
 
 
 
