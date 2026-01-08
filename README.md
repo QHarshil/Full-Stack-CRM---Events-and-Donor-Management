@@ -1,4 +1,4 @@
-# BC Cancer Foundation - Donor Management CRM
+# BC Cancer Foundation - Donor Management CRM Industry Project
 
 Full-stack donor engagement platform with event management, multi-criteria donor matching, and audit logging. NestJS backend with React dashboard.
 
